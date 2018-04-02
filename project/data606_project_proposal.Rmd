@@ -1,0 +1,167 @@
+---
+title: "DATA 606 Data Project Proposal"
+author: "Paul Britton"
+output: pdf_document
+---
+
+
+```{r, echo=FALSE}
+rm(list = ls())
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(quantmod)
+library(data.table)
+library(psych)
+library(ggplot2)
+library(knitr)
+```
+
+
+### Data Preparation
+
+We'll collect the data that we need from the internet (yahoo!finance) using the "quantmod" package:
+
+```{r collectData, echo=TRUE,message=FALSE, warning=FALSE}
+
+
+startDate <- as.Date("2007-01-01")
+endDate <- as.Date("2018-03-29")
+tickers <- c("spy")
+
+data <- tail(as.data.frame(getSymbols(tickers, 
+                                      env=NULL, 
+                                      src="yahoo", 
+                                      from=startDate, 
+                                      to=endDate)),-9)
+
+write.csv(data,file = "SPY_data.csv")
+
+
+```
+
+Now we'll take a look and see what we've collected:
+
+```{r}
+
+kable(head(data))
+
+```
+
+
+
+The data looks good.  Note that I've frozen a copy on my github [here](https://github.com/plb2018/DATA606/tree/master/project)
+
+
+
+### Research question 
+
+**You should phrase your research question in a way that matches up with the scope of inference your dataset allows for.**
+
+Is the change (i.e. "higher" or "lower") of 3-month daily standard deviation of the S&P 500 stock index predictive of price-return for that index over the subsequent 1-month period?
+
+
+
+### Cases 
+
+**What are the cases, and how many are there?**
+
+Each pairing of "3-month standard deviation" and "subsequent 1-month performance" represents a case.  For simplicity, we'll assume that 1 month == 20 business days and thus, our standard-deviation lookback will be 60 periods.
+
+Assuming that the inclusion of overlapping periods will not be allowed, we will have `r 2820/60`
+periods.  We need to allow for the fact that we need a 3-month lookback, and a one-month "out-sample" for each case, thus we will end up with  46 cases.
+
+
+### Data collection 
+
+**Describe the method of data collection.**
+
+The data is collected in real-time by the NYSE and is downsampled and cleaned by CSI data, a vendor/provider of financial market data. 
+
+
+
+### Type of study 
+
+**What type of study is this (observational/experiment)?**
+
+This is an obvervational study
+
+
+
+### Data Source 
+
+**If you collected the data, state self-collected. If not, provide a citation/link.**
+
+Collected from yahoo!finance and saved to github using the code in the "collectData" code chunk above.
+
+
+### Response 
+
+**What is the response variable, and what type is it (numerical/categorical)?**
+
+1 month stock returns
+
+
+### Explanatory 
+
+**What is the explanatory variable, and what type is it (numerical/categorival)?**
+
+3-month standard deviation of price returns - numerical.
+
+
+### Relevant summary statistics 
+
+**Provide summary statistics relevant to your research question. For example, if you're comparing means across groups provide means, SDs, sample sizes of each group. This step requires the use of R, hence a code chunk is provided below. Insert more code chunks as needed.**
+
+The first thing that we'll do is compute percentage returns:
+
+```{r}
+
+pct.returns <- ((data["SPY.Close"] / shift(data["SPY.Close"],1)) -1)*100
+
+```
+
+Then we'll compute the standard deviation of returns on a rolling 60-day basis, and extract non-overlapping periods for both standard-deviation and subsequent returns.
+
+```{r}
+
+stdev <- rollapplyr(pct.returns,60,sd,fill=0)
+stdev <- stdev * 16 #scale to "annual stdev #s"
+
+#use only non-overlapping periods
+df = as.data.frame(stdev[seq(61, nrow(stdev), 60), ])
+df$returns = pct.returns[seq(81, nrow(pct.returns), 60), ]
+
+#rename the cols
+colnames(df) <- c("sd","r")
+
+```
+
+
+Now we'll look at the summary statistics and histograms for each variable:
+
+```{r}
+
+describe(df$sd)
+
+describe(df$r)
+
+
+ggplot(df,aes(x=df$sd)) +
+  geom_histogram() +
+  xlab("StDev") +
+  ggtitle("StDev Distribution")  +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplot(df,aes(x=df$r)) +
+  geom_histogram()+
+  xlab("Returns")+
+  ggtitle("Return Distribution")  +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+
+```
+
