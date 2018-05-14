@@ -1,4 +1,4 @@
-date,open,high,low.close,volume,unadjClose,flag
+date,open,high,low,close,volume,unadjClose,flag
 19741202,69.8,69.8,67.81,68.11,1114,68.11,1.0
 19741203,68.11,68.13,66.62,67.17,1362,67.17,1.0
 19741204,67.17,68.32,66.61,67.41,1258,67.41,1.0
